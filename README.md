@@ -13,7 +13,7 @@ TechNews is a Rust-based project designed to scrape news articles from tech webs
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/cadusouza1/TechNews.git
+    git clone https://github.com/cadusouza1/technews.git
     cd TechNews
     ```
 
