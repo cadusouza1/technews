@@ -14,7 +14,7 @@ TechNews is a Rust-based project designed to scrape news articles from tech webs
 1. Clone the repository:
     ```sh
     git clone https://github.com/cadusouza1/technews.git
-    cd TechNews
+    cd technews
     ```
 
 2. Set up the environment variables required for SMTP configuration:
