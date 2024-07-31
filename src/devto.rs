@@ -61,7 +61,8 @@ pub fn filter_news_from_today(news: Vec<DevtoNews>) -> Vec<DevtoNews> {
 
 pub async fn get_devto_news<'a>(
     client: &Client,
-    url: impl Into<&'a str> + Copy,
+    base_url_str: impl Into<&'a str>,
+    url: impl Into<&'a str>,
     headers: HeaderMap,
 ) -> Result<Vec<DevtoNews>, Box<dyn std::error::Error + 'a>> {
     let resp = client
@@ -76,7 +77,7 @@ pub async fn get_devto_news<'a>(
     let title_selector = "div.crayons-story > a:nth-child(1)";
     let date_selector = "div.crayons-story > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > a:nth-child(2) > time:nth-child(1)";
 
-    from_devto_document(title_selector, date_selector, url, &document)
+    from_devto_document(title_selector, date_selector, base_url_str, &document)
 }
 
 pub fn devto_news_to_html(news: &Vec<DevtoNews>) -> String {
