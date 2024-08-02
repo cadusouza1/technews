@@ -54,7 +54,6 @@ pub fn filter_news_from_today(news: Vec<HackadayNews>) -> Vec<HackadayNews> {
 
     filtered
 }
-
 pub async fn get_hackaday_news<'a>(
     client: &Client,
     headers: HeaderMap,

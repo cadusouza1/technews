@@ -1,12 +1,12 @@
-extern crate lettre;
-
+mod devto;
 mod hackaday;
 use lettre::{
-    message::{header::ContentType, SinglePart},
+    message::{header::ContentType, MultiPart, SinglePart},
     transport::smtp::authentication::Credentials,
     Message, SmtpTransport, Transport,
 };
 use reqwest::{header::HeaderMap, Client};
+use scraper::{Html, Selector};
 use tokio;
 
 #[tokio::main]
@@ -22,19 +22,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     headers.insert("user-agent", "CUSTOM_NAME/1.0".parse()?);
 
     let hackaday_news =
-        hackaday::get_hackaday_news(&client, headers, "https://hackaday.com/").await?;
+        hackaday::get_hackaday_news(&client, headers.clone(), "https://hackaday.com/").await?;
 
-    let filtered_news = hackaday::filter_news_from_today(hackaday_news);
-    let page = hackaday::hackaday_news_to_html(&filtered_news);
+    let filtered_hackaday_news = hackaday::filter_news_from_today(hackaday_news);
+    let hackaday_page = hackaday::hackaday_news_to_html(&filtered_hackaday_news);
+
+    let devto_news = devto::get_devto_news(
+        &client,
+        "https://dev.to",
+        "https://dev.to/t/programming",
+        headers,
+    )
+    .await?;
+    let filtered_devto_news = devto::filter_news_from_today(devto_news);
+    let devto_page = devto::devto_news_to_html(&filtered_devto_news);
 
     let email = Message::builder()
         .from(smtp_username.parse()?)
         .to(smtp_username.parse()?)
         .subject("Tech news from the past 24h")
-        .singlepart(
-            SinglePart::builder()
-                .header(ContentType::TEXT_HTML)
-                .body(page.to_string()),
+        .multipart(
+            MultiPart::alternative()
+                .singlepart(
+                    SinglePart::builder()
+                        .header(ContentType::TEXT_HTML)
+                        .body(hackaday_page),
+                )
+                .singlepart(
+                    SinglePart::builder()
+                        .header(ContentType::TEXT_HTML)
+                        .body(devto_page),
+                ),
         )?;
 
     let mailer = SmtpTransport::starttls_relay(&smtp_server)?
@@ -42,6 +60,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build();
 
     mailer.send(&email)?;
-    println!("{page:#?}");
     Ok(())
 }
