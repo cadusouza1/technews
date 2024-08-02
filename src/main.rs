@@ -6,7 +6,6 @@ use lettre::{
     Message, SmtpTransport, Transport,
 };
 use reqwest::{header::HeaderMap, Client};
-use scraper::{Html, Selector};
 use tokio;
 
 #[tokio::main]
@@ -42,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .to(smtp_username.parse()?)
         .subject("Tech news from the past 24h")
         .multipart(
-            MultiPart::alternative()
+            MultiPart::mixed()
                 .singlepart(
                     SinglePart::builder()
                         .header(ContentType::TEXT_HTML)
