@@ -1,5 +1,6 @@
 use chrono::{self, Local, NaiveDate};
 use maud::{html, DOCTYPE};
+use reqwest::{header::HeaderMap, Client, IntoUrl};
 use scraper::{self, Html, Selector};
 
 #[derive(Debug)]
@@ -53,11 +54,20 @@ pub fn filter_news_from_today(news: Vec<HackadayNews>) -> Vec<HackadayNews> {
 
     filtered
 }
-
 pub async fn get_hackaday_news<'a>(
-    url: &'a str,
+    client: &Client,
+    headers: HeaderMap,
+    url: impl IntoUrl,
 ) -> Result<Vec<HackadayNews>, Box<dyn std::error::Error + 'a>> {
-    let resp = reqwest::get(url).await?.text().await?;
+    // let resp = reqwest::get(url).await?.text().await?;
+    let resp = client
+        .get(url)
+        .headers(headers)
+        .send()
+        .await?
+        .text()
+        .await?;
+
     let document = scraper::Html::parse_document(&resp);
     let title_selector = ".recent_entries-list > li > div > h2 > a:nth-child(1)";
     let date_selector = ".recent_entries-list > li > div > div > p > span:nth-child(2)";

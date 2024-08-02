@@ -1,7 +1,7 @@
 mod devto;
 mod hackaday;
 use lettre::{
-    message::{header::ContentType, SinglePart},
+    message::{header::ContentType, MultiPart, SinglePart},
     transport::smtp::authentication::Credentials,
     Message, SmtpTransport, Transport,
 };
@@ -21,6 +21,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     headers.insert("authorization", "<authorization>".parse()?);
     headers.insert("user-agent", "CUSTOM_NAME/1.0".parse()?);
 
+    let hackaday_news =
+        hackaday::get_hackaday_news(&client, headers.clone(), "https://hackaday.com/").await?;
+
+    let filtered_hackaday_news = hackaday::filter_news_from_today(hackaday_news);
+    let hackaday_page = hackaday::hackaday_news_to_html(&filtered_hackaday_news);
+
     let devto_news = devto::get_devto_news(
         &client,
         "https://dev.to",
@@ -28,17 +34,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         headers,
     )
     .await?;
-    let filtered = devto::filter_news_from_today(devto_news);
-    let page = devto::devto_news_to_html(&filtered);
+    let filtered_devto_news = devto::filter_news_from_today(devto_news);
+    let devto_page = devto::devto_news_to_html(&filtered_devto_news);
 
     let email = Message::builder()
         .from(smtp_username.parse()?)
         .to(smtp_username.parse()?)
         .subject("Tech news from the past 24h")
-        .singlepart(
-            SinglePart::builder()
-                .header(ContentType::TEXT_HTML)
-                .body(page.to_string()),
+        .multipart(
+            MultiPart::alternative()
+                .singlepart(
+                    SinglePart::builder()
+                        .header(ContentType::TEXT_HTML)
+                        .body(hackaday_page),
+                )
+                .singlepart(
+                    SinglePart::builder()
+                        .header(ContentType::TEXT_HTML)
+                        .body(devto_page),
+                ),
         )?;
 
     let mailer = SmtpTransport::starttls_relay(&smtp_server)?
