@@ -6,6 +6,7 @@ use lettre::{
     transport::smtp::authentication::Credentials,
     Message, SmtpTransport, Transport,
 };
+use reqwest::{header::HeaderMap, Client};
 use tokio;
 
 #[tokio::main]
@@ -14,7 +15,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let smtp_password = std::env::var("SMTP_PASSWORD")?;
     let smtp_server = std::env::var("SMTP_SERVER")?;
 
-    let hackaday_news = hackaday::get_hackaday_news("https://hackaday.com/").await?;
+    let client = Client::new();
+    let mut headers = HeaderMap::new();
+
+    headers.insert("authorization", "<authorization>".parse()?);
+    headers.insert("user-agent", "CUSTOM_NAME/1.0".parse()?);
+
+    let hackaday_news =
+        hackaday::get_hackaday_news(&client, headers, "https://hackaday.com/").await?;
+
     let filtered_news = hackaday::filter_news_from_today(hackaday_news);
     let page = hackaday::hackaday_news_to_html(&filtered_news);
 
