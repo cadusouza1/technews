@@ -1,27 +1,17 @@
-use chrono::{self, Local, NaiveDate};
-use maud::{html, DOCTYPE};
+use crate::news::News;
+use chrono::{self, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use reqwest::{header::HeaderMap, Client, IntoUrl};
 use scraper::{self, Html, Selector};
 
-#[derive(Debug)]
-pub struct HackadayNews {
-    title: String,
-    link: String,
-    date: NaiveDate,
-}
-
-impl HackadayNews {
-    fn new(title: String, link: String, date: NaiveDate) -> Self {
-        Self { title, link, date }
-    }
-}
-
-pub fn from_hackaday_document<'a>(
-    title_selector_str: impl Into<&'a str>, // the link is in the title tag
-    date_selector_str: impl Into<&'a str>,
-    date_format: impl Into<&'a str>,
+pub fn from_hackaday_document<'a, S>(
+    title_selector_str: S, // the link is in the title tag
+    date_selector_str: S,
+    date_format: S,
     document: &Html,
-) -> Result<Vec<HackadayNews>, Box<dyn std::error::Error + 'a>> {
+) -> Result<Vec<News>, Box<dyn std::error::Error + 'a>>
+where
+    S: Into<&'a str>,
+{
     let mut news = vec![];
     let title_selector = Selector::parse(title_selector_str.into())?;
     let date_selector = Selector::parse(date_selector_str.into())?;
@@ -31,35 +21,26 @@ pub fn from_hackaday_document<'a>(
         .select(&title_selector)
         .zip(document.select(&date_selector))
     {
-        let news_title = title.text().collect::<String>();
+        let news_title: String = title.text().collect();
         let link = title.attr("href").ok_or("News link not found")?.to_string();
         let date = NaiveDate::parse_from_str(&date.text().collect::<String>(), news_date_format)?;
-
-        news.push(HackadayNews::new(news_title, link, date));
+        let naive_time = NaiveTime::from_hms_opt(0, 0, 0).ok_or("Error parsing naive time")?;
+        news.push(News::new(
+            news_title,
+            link,
+            None,
+            Utc.from_utc_datetime(&NaiveDateTime::new(date, naive_time)),
+        ));
     }
 
     Ok(news)
 }
 
-pub fn filter_news_from_today(news: Vec<HackadayNews>) -> Vec<HackadayNews> {
-    let mut filtered = vec![];
-
-    for news_data in news {
-        let delta = Local::now().date_naive() - news_data.date;
-
-        if delta.num_days() <= 1 {
-            filtered.push(news_data);
-        }
-    }
-
-    filtered
-}
 pub async fn get_hackaday_news<'a>(
     client: &Client,
     headers: HeaderMap,
     url: impl IntoUrl,
-) -> Result<Vec<HackadayNews>, Box<dyn std::error::Error + 'a>> {
-    // let resp = reqwest::get(url).await?.text().await?;
+) -> Result<Vec<News>, Box<dyn std::error::Error + 'a>> {
     let resp = client
         .get(url)
         .headers(headers)
@@ -73,24 +54,4 @@ pub async fn get_hackaday_news<'a>(
     let date_selector = ".recent_entries-list > li > div > div > p > span:nth-child(2)";
 
     from_hackaday_document(title_selector, date_selector, "%B %d, %Y", &document)
-}
-
-pub fn hackaday_news_to_html(news: &Vec<HackadayNews>) -> String {
-    html! {
-        (DOCTYPE)
-        html {
-            head {
-                meta charset="UTF-8";
-            }
-        }
-
-        body {
-            @for item in news {
-                h1 { (item.title) }
-                p { "See more at: " a href=(item.link) { (item.link) } }
-                p {}
-            }
-        }
-    }
-    .into()
 }
