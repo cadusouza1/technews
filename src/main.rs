@@ -13,6 +13,8 @@ use reqwest::{header::HeaderMap, Client};
 use scraper::Html;
 use tokio::{self, task::JoinSet};
 
+use crate::news::News;
+
 type ParseFnType =
     Box<dyn Fn(&Html) -> std::result::Result<Vec<news::News>, Box<dyn std::error::Error>>>;
 
@@ -52,30 +54,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut pages = vec![];
     while let Some(res) = set.join_next().await {
-        let out = res??;
-        println!("Finished fetching {}", out.0);
-        pages.push((out.0, Html::parse_document(&out.1)));
+        let (url, doc) = res??;
+        println!("Finished fetching {}", url);
+        pages.push((url, Html::parse_document(&doc)));
     }
 
-    let mut parsed_pages = vec![];
-    for page in pages.iter() {
-        let parse_func = url_map
-            .get(page.0)
-            .ok_or(format!("Could not get parse_func for {}", page.0))?;
+    // Maybe putting it all in a functional way was not the way
+    let parsed_pages = pages
+        .iter()
+        .map(|page| {
+            let parse_func = url_map
+                .get(page.0)
+                .ok_or(format!("Could not get parse_func for {}", page.0))
+                .unwrap();
 
-        parsed_pages.push(parse_func(&page.1)?);
-    }
+            println!("Parsing {}", page.0);
+            (page.0, parse_func(&page.1))
+        })
+        .map(|(url, n)| (url, n.into_iter().flatten().collect()))
+        .collect::<Vec<(&str, Vec<News>)>>();
 
     let filtered_pages = parsed_pages
         .iter()
-        .map(|n| news::filter_news_from_delta(n.to_vec(), delta))
-        .collect::<Vec<_>>();
+        .map(|(url, n)| {
+            println!("Filtering {}", url);
+            (*url, news::filter_news_from_delta(n.to_vec(), delta))
+        })
+        .collect::<Vec<(&str, Vec<News>)>>();
 
     let html_page = filtered_pages
         .iter()
-        .map(news::news_to_html)
+        .map(|(url, n)| {
+            println!("Converting to HTML {}", url);
+            news::news_to_html(&n)
+        })
         .collect::<String>();
 
+    println!("Building email");
     let email = Message::builder()
         .from(smtp_username.parse()?)
         .to(smtp_username.parse()?)
@@ -86,10 +101,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .body(html_page),
         )?;
 
+    println!("Building mailer");
     let mailer = SmtpTransport::starttls_relay(&smtp_server)?
         .credentials(Credentials::new(smtp_username, smtp_password))
         .build();
 
+    println!("Sending email");
     mailer.send(&email)?;
+    println!("Email sent");
     Ok(())
 }
