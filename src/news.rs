@@ -1,7 +1,8 @@
 use chrono::{DateTime, Local, TimeDelta, Utc};
 use maud::{html, DOCTYPE};
+use reqwest::{header::HeaderMap, Client};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct News {
     title: String,
     link: String,
@@ -32,6 +33,26 @@ pub fn filter_news_from_delta(news: Vec<News>, delta: TimeDelta) -> Vec<News> {
             news_delta <= delta
         })
         .collect()
+}
+
+pub async fn fetch_raw_news<'a, S>(
+    client: Client,
+    headers: HeaderMap,
+    url: S,
+) -> Result<(S, String), reqwest::Error>
+where
+    S: Into<&'a str> + Clone,
+{
+    Ok((
+        url.clone(),
+        client
+            .get(url.into())
+            .headers(headers)
+            .send()
+            .await?
+            .text()
+            .await?,
+    ))
 }
 
 pub fn news_to_html(news: &Vec<News>) -> String {
