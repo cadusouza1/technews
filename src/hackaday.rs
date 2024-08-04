@@ -1,6 +1,5 @@
 use crate::news::News;
 use chrono::{self, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
-use reqwest::{header::HeaderMap, Client, IntoUrl};
 use scraper::{self, Html, Selector};
 
 pub fn from_hackaday_document<'a, S>(
@@ -36,20 +35,7 @@ where
     Ok(news)
 }
 
-pub async fn get_hackaday_news<'a>(
-    client: &Client,
-    headers: HeaderMap,
-    url: impl IntoUrl,
-) -> Result<Vec<News>, Box<dyn std::error::Error + 'a>> {
-    let resp = client
-        .get(url)
-        .headers(headers)
-        .send()
-        .await?
-        .text()
-        .await?;
-
-    let document = scraper::Html::parse_document(&resp);
+pub fn parse_hackaday_document(document: &Html) -> Result<Vec<News>, Box<dyn std::error::Error>> {
     let title_selector = ".recent_entries-list > li > div > h2 > a:nth-child(1)";
     let date_selector = ".recent_entries-list > li > div > div > p > span:nth-child(2)";
 
