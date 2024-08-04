@@ -1,6 +1,23 @@
 # TechNews
 
-TechNews is a Rust-based project designed to scrape news articles from tech websites and send a summary of the latest news via email. The initial implementation fetches news from Hackaday and sends an email with articles from the past 24 hours.
+A Rust-based application to fetch and display the latest news from various sources.
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Features](#features)
+- [Getting Started](#getting-started)
+- [Installation](#installation)
+- [Usage](#usage)
+
+## Introduction
+
+The TechNews application fetches and displays the latest news from multiple sources. It is written in Rust and aims to provide a simple, efficient, and reliable way to stay updated with current events.
+
+## Features
+
+- Fetches news from multiple sources.
+- Displays news in a user-friendly format.
 
 ## Getting Started
 ### Prerequisites
