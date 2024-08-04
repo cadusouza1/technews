@@ -1,4 +1,5 @@
 mod devto;
+mod err;
 mod hackaday;
 mod news;
 use std::collections::HashMap;
@@ -15,8 +16,8 @@ use tokio::{self, task::JoinSet};
 
 use crate::news::News;
 
-type ParseFnType =
-    Box<dyn Fn(&Html) -> std::result::Result<Vec<news::News>, Box<dyn std::error::Error>>>;
+type ParseFnResult = Result<Vec<news::News>, err::ParseError>;
+type ParseFnType = Box<dyn Fn(&Html) -> ParseFnResult>;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
