@@ -12,7 +12,7 @@ where
     let mut news = vec![];
     let title_selector = Selector::parse(title_selector_str.into())?;
     let date_selector = Selector::parse(date_selector_str.into())?;
-    let base_url = "https://dev.to/";
+    let base_url = "https://dev.to";
 
     for (title, date) in document
         .select(&title_selector)
