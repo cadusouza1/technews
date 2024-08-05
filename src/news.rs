@@ -65,8 +65,9 @@ pub fn news_to_html(news: &Vec<News>) -> String {
         }
 
         body {
+            h1 { center {"Tech News" } }
             @for item in news {
-                h1 { (item.title) }
+                h2 { center { (item.title) } }
                 @if let Some(desc) = item.description.clone() {
                     p { (desc) }
                 }
